@@ -17,59 +17,86 @@ import (
 // a DestGenerateReply that includes the new event and whether or not the search
 // was successful.
 func (s *Service) DestGenerate(ctx context.Context, opts eventdb.DestGenerateRequest) (eventdb.DestGenerateReply, error) {
-	const op errors.Op = "Service.DestGenerate"
+	return eventdb.DestGenerateReply{
+		Result: eventdb.GenerateWait,
+		Dests: []eventdb.Dest{{
+			ID:      eventdb.DestID(0),
+			UserID:  opts.UserID,
+			EventID: eventdb.EventID("findrandomevents"),
+		}},
+		Events: []eventdb.Event{{
+			ID:   eventdb.EventID("findrandomevents"),
+			Name: "Sad News, Bad Timing",
+			Description: `Man, it's just my luck. A few days ago I launched this app and a just hours later Facebook killed it with a change to their platform.
 
-	reply := eventdb.DestGenerateReply{
-		Result: eventdb.GenerateOK,
-		Dests:  []eventdb.Dest{},
-		Events: []eventdb.Event{},
-	}
+On April 4th, in response to the Cambridge Analytica scandal, Facebook decided to cut off access to their Events API for all app developers. I used this API to find random events and without it The Third Party won't work. :-(
 
-	userID := opts.UserID
+But there may still be hope.
 
-	currentUser := auth.User(ctx)
-	if currentUser.ID == "" {
-		return reply, errors.E(op, errors.Permission)
-	}
-	if userID == "me" || userID == "" {
-		userID = eventdb.UserID(currentUser.ID)
-	}
-	if userID != eventdb.UserID(currentUser.ID) && !currentUser.IsAdmin { // Only admins can look up other users
-		return reply, errors.E(op, errors.Permission)
-	}
+I am applying to have the API re-activated and the app restored. If/when this happens I will let all of you know by email and you can start bubble-hopping again. Until then, please burn some incense for Mark Zuckerberg and make ritual offerings to the gods of social media. The future of this app is (sadly) in Facebook's hands.
+-Max`,
+			Latitude:  46.268369,
+			Longitude: -124.084311,
+			StartTime: time.Date(2018, 4, 4, 12, 0, 0, 0, time.UTC),
+			Cover:     "https://media.giphy.com/media/DzIIiyZvSdzxu/giphy.gif",
+			Place:     "Cape Disappointment",
+			Address:   "☹️",
+		}},
+	}, nil
 
-	chosenID, result, err := s.nextEvent(ctx, userID, opts)
-	if err != nil {
-		return reply, errors.E(op, errors.Internal, "nextEvent failed", err)
-	}
-	reply.Result = result
-
-	if result == eventdb.GenerateOK {
-		_, err = s.DestStore.Create(ctx, eventdb.Dest{
-			UserID:  userID,
-			EventID: chosenID,
-		})
-		if err != nil {
-			return reply, errors.E(op, userID, errors.Internal, "create dest", err)
-		}
-	}
-
-	dests, err := s.DestList(ctx, eventdb.DestListRequest{})
-	if err != nil {
-		return reply, errors.E(op, userID, errors.Internal, "list dests", err)
-	}
-	reply.Dests = dests
-
-	destEvents := []eventdb.Event{}
-	for i := range dests {
-		dest := &dests[i]
-
-		destEvents = append(destEvents, *dest.Event)
-		dest.Event = nil
-	}
-	reply.Events = destEvents
-
-	return reply, nil
+	// const op errors.Op = "Service.DestGenerate"
+	//
+	// reply := eventdb.DestGenerateReply{
+	// 	Result: eventdb.GenerateOK,
+	// 	Dests:  []eventdb.Dest{},
+	// 	Events: []eventdb.Event{},
+	// }
+	//
+	// userID := opts.UserID
+	//
+	// currentUser := auth.User(ctx)
+	// if currentUser.ID == "" {
+	// 	return reply, errors.E(op, errors.Permission)
+	// }
+	// if userID == "me" || userID == "" {
+	// 	userID = eventdb.UserID(currentUser.ID)
+	// }
+	// if userID != eventdb.UserID(currentUser.ID) && !currentUser.IsAdmin { // Only admins can look up other users
+	// 	return reply, errors.E(op, errors.Permission)
+	// }
+	//
+	// chosenID, result, err := s.nextEvent(ctx, userID, opts)
+	// if err != nil {
+	// 	return reply, errors.E(op, errors.Internal, "nextEvent failed", err)
+	// }
+	// reply.Result = result
+	//
+	// if result == eventdb.GenerateOK {
+	// 	_, err = s.DestStore.Create(ctx, eventdb.Dest{
+	// 		UserID:  userID,
+	// 		EventID: chosenID,
+	// 	})
+	// 	if err != nil {
+	// 		return reply, errors.E(op, userID, errors.Internal, "create dest", err)
+	// 	}
+	// }
+	//
+	// dests, err := s.DestList(ctx, eventdb.DestListRequest{})
+	// if err != nil {
+	// 	return reply, errors.E(op, userID, errors.Internal, "list dests", err)
+	// }
+	// reply.Dests = dests
+	//
+	// destEvents := []eventdb.Event{}
+	// for i := range dests {
+	// 	dest := &dests[i]
+	//
+	// 	destEvents = append(destEvents, *dest.Event)
+	// 	dest.Event = nil
+	// }
+	// reply.Events = destEvents
+	//
+	// return reply, nil
 }
 
 // TODO(maxhawkins): clean this up
